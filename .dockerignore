@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Development files
+.air.toml
+scripts/
+Makefile
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+build-errors.log
+
+# Temporary files
+tmp/
+bin/
+
+# Environment files
+.env*
+
+# Deployment
+deployment/

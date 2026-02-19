@@ -1,0 +1,20 @@
+# .air.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/http"
+  include_ext = ["go", "yaml"]
+  exclude_dir = ["migrations", "tmp", "vendor"]
+
+[log]
+  time = true
+  color = true
+
+[dev]
+  debug = true
+
+[runner]
+  cmd = "./tmp/main"
+  restart = "always"
