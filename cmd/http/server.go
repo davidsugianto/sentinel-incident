@@ -14,8 +14,9 @@ import (
 
 type Server struct {
 	*http.Server
-	handler *httpHandler.Handler
-	config  *config.Config
+	handler    *httpHandler.Handler
+	authHandler *httpHandler.AuthHandler
+	config     *config.Config
 }
 
 type Dependencies struct {
@@ -29,7 +30,8 @@ func New(deps Dependencies) *Server {
 		handler: httpHandler.New(httpHandler.Dependencies{
 			IncidentUseCase: deps.IncidentUseCase,
 		}),
-		config: deps.Config,
+		authHandler: httpHandler.NewAuthHandler(&deps.Config.Auth),
+		config:      deps.Config,
 	}
 }
 
@@ -37,14 +39,23 @@ func (s *Server) v1Endpoint(r *gin.Engine) {
 	g := r.Group("/v1")
 	g.Use(gin.Recovery(), middleware.RequestID(), middleware.Logger())
 
-	// health check
+	// health check (public)
 	g.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
 	})
 
-	// incident
-	incident := g.Group("/incidents")
-	incident.POST("", s.handler.CreateIncident)
+	// auth routes (public)
+	auth := g.Group("/auth")
+	auth.POST("/login", s.authHandler.Login)
+
+	// incident routes (protected)
+	incidents := g.Group("/incidents")
+	incidents.Use(middleware.JWT(&s.config.Auth))
+	incidents.GET("", s.handler.ListIncidents)
+	incidents.GET("/:id", s.handler.GetIncident)
+	incidents.POST("", s.handler.CreateIncident)
+	incidents.PUT("/:id", s.handler.UpdateIncident)
+	incidents.DELETE("/:id", s.handler.DeleteIncident)
 }
 
 func (s *Server) Run(port string) error {
