@@ -10,11 +10,13 @@ import (
 )
 
 type Config struct {
-	Server   Server   `yaml:"server"`
-	Database Database `yaml:"database"`
-	Auth     Auth     `yaml:"auth"`
-	CORS     CORS     `yaml:"cors"`
-	Slack    Slack    `yaml:"slack"`
+	Server    Server    `yaml:"server"`
+	Database  Database  `yaml:"database"`
+	Auth      Auth      `yaml:"auth"`
+	CORS      CORS      `yaml:"cors"`
+	Slack     Slack     `yaml:"slack"`
+	Lark      Lark      `yaml:"lark"`
+	PagerDuty PagerDuty `yaml:"pagerduty"`
 }
 
 type Server struct {
@@ -47,6 +49,16 @@ type CORS struct {
 type Slack struct {
 	WebhookURL string `yaml:"webhook_url"`
 	Enabled    bool   `yaml:"enabled"`
+}
+
+type Lark struct {
+	WebhookURL string `yaml:"webhook_url"`
+	Enabled    bool   `yaml:"enabled"`
+}
+
+type PagerDuty struct {
+	APIToken string `yaml:"api_token"`
+	Enabled  bool   `yaml:"enabled"`
 }
 
 var (

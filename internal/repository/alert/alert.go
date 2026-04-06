@@ -5,11 +5,34 @@ import (
 	"fmt"
 
 	incidentModel "github.com/davidsugianto/sentinel-incident/internal/model/incident"
+	"github.com/davidsugianto/sentinel-incident/internal/pkg/lark"
 	"github.com/davidsugianto/sentinel-incident/internal/pkg/logger"
 	"github.com/davidsugianto/sentinel-incident/internal/pkg/slack"
 )
 
 func (r *repository) SendAlert(ctx context.Context, data *incidentModel.Incident) error {
+	// Send to Slack
+	if err := r.sendSlackAlert(ctx, data); err != nil {
+		logger.Error(ctx, "Failed to send Slack alert", map[string]interface{}{
+			"error":       err.Error(),
+			"incident_id": data.ID,
+		})
+		// Continue to other channels even if Slack fails
+	}
+
+	// Send to Lark
+	if err := r.sendLarkAlert(ctx, data); err != nil {
+		logger.Error(ctx, "Failed to send Lark alert", map[string]interface{}{
+			"error":       err.Error(),
+			"incident_id": data.ID,
+		})
+		// Continue even if Lark fails
+	}
+
+	return nil
+}
+
+func (r *repository) sendSlackAlert(ctx context.Context, data *incidentModel.Incident) error {
 	if !r.slackConfig.Enabled || r.slackConfig.WebhookURL == "" {
 		logger.Info(ctx, "Slack alerts disabled or webhook not configured", nil)
 		return nil
@@ -23,14 +46,33 @@ func (r *repository) SendAlert(ctx context.Context, data *incidentModel.Incident
 	msg := r.buildSlackMessage(data)
 
 	if err := r.slackClient.SendMessage(ctx, msg); err != nil {
-		logger.Error(ctx, "Failed to send Slack alert", map[string]interface{}{
-			"error":       err.Error(),
-			"incident_id": data.ID,
-		})
 		return err
 	}
 
 	logger.Info(ctx, "Slack alert sent successfully", map[string]interface{}{
+		"incident_id": data.ID,
+	})
+	return nil
+}
+
+func (r *repository) sendLarkAlert(ctx context.Context, data *incidentModel.Incident) error {
+	if !r.larkConfig.Enabled || r.larkConfig.WebhookURL == "" {
+		logger.Info(ctx, "Lark alerts disabled or webhook not configured", nil)
+		return nil
+	}
+
+	if r.larkClient == nil {
+		logger.Info(ctx, "Lark client not initialized", nil)
+		return nil
+	}
+
+	msg := r.buildLarkMessage(data)
+
+	if err := r.larkClient.SendMessage(ctx, msg); err != nil {
+		return err
+	}
+
+	logger.Info(ctx, "Lark alert sent successfully", map[string]interface{}{
 		"incident_id": data.ID,
 	})
 	return nil
@@ -81,5 +123,83 @@ func (r *repository) getStatusEmoji(status incidentModel.Status) string {
 		return ":large_green_circle:"
 	default:
 		return ":white_circle:"
+	}
+}
+
+func (r *repository) buildLarkMessage(incident *incidentModel.Incident) *lark.CardMessage {
+	template := r.getLarkTemplate(incident.Severity)
+
+	return &lark.CardMessage{
+		MsgType: "interactive",
+		Card: &lark.Card{
+			Config: &lark.CardConfig{
+				WideScreenMode: true,
+				EnableForward:  true,
+			},
+			Header: &lark.CardHeader{
+				Title: &lark.CardTitle{
+					Tag:     "plain_text",
+					Content: fmt.Sprintf("Incident: %s", incident.Title),
+				},
+				Template: template,
+			},
+			Elements: []lark.Element{
+				lark.FieldElement{
+					Tag: "div",
+					Fields: []lark.Field{
+						{
+							IsShort: true,
+							Text: lark.TextItem{
+								Tag:     "lark_md",
+								Content: fmt.Sprintf("**Status:** %s", incident.Status),
+							},
+						},
+						{
+							IsShort: true,
+							Text: lark.TextItem{
+								Tag:     "lark_md",
+								Content: fmt.Sprintf("**Severity:** %s", incident.Severity),
+							},
+						},
+						{
+							IsShort: true,
+							Text: lark.TextItem{
+								Tag:     "lark_md",
+								Content: fmt.Sprintf("**Team:** %s", incident.TeamID),
+							},
+						},
+						{
+							IsShort: true,
+							Text: lark.TextItem{
+								Tag:     "lark_md",
+								Content: fmt.Sprintf("**ID:** %s", incident.ID.String()),
+							},
+						},
+					},
+				},
+				lark.DivElement{
+					Tag: "div",
+					Text: &lark.TextItem{
+						Tag:     "lark_md",
+						Content: fmt.Sprintf("**Description:** %s", incident.Description),
+					},
+				},
+			},
+		},
+	}
+}
+
+func (r *repository) getLarkTemplate(severity incidentModel.Severity) string {
+	switch severity {
+	case incidentModel.SeverityCritical:
+		return "red"
+	case incidentModel.SeverityHigh:
+		return "orange"
+	case incidentModel.SeverityMedium:
+		return "yellow"
+	case incidentModel.SeverityLow:
+		return "green"
+	default:
+		return "blue"
 	}
 }

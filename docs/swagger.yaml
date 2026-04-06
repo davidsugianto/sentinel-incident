@@ -1,0 +1,173 @@
+basePath: /v1
+definitions:
+  http.CreateIncidentRequest:
+    properties:
+      content:
+        additionalProperties: true
+        type: object
+      description:
+        type: string
+      severity:
+        $ref: '#/definitions/incident.Severity'
+      team_id:
+        type: string
+      title:
+        type: string
+    required:
+    - team_id
+    - title
+    type: object
+  http.LoginRequest:
+    properties:
+      team_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - team_id
+    - user_id
+    type: object
+  incident.Incident:
+    properties:
+      content:
+        additionalProperties: true
+        type: object
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      resolved:
+        type: boolean
+      resolved_at:
+        type: string
+      severity:
+        $ref: '#/definitions/incident.Severity'
+      status:
+        $ref: '#/definitions/incident.Status'
+      team_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  incident.Severity:
+    enum:
+    - critical
+    - high
+    - medium
+    - low
+    type: string
+    x-enum-varnames:
+    - SeverityCritical
+    - SeverityHigh
+    - SeverityMedium
+    - SeverityLow
+  incident.Status:
+    enum:
+    - open
+    - acknowledged
+    - resolved
+    type: string
+    x-enum-varnames:
+    - StatusOpen
+    - StatusAcknowledged
+    - StatusResolved
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      error:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@sentinel-incident.local
+    name: API Support
+  description: Incident management and alerting service API with multi-channel support
+    (Slack, Lark) and on-call integrations (PagerDuty).
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Sentinel Incident API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: User login
+      tags:
+      - auth
+  /incidents:
+    post:
+      consumes:
+      - application/json
+      description: Create a new incident with the provided details
+      parameters:
+      - description: Incident data
+        in: body
+        name: incident
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateIncidentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/incident.Incident'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new incident
+      tags:
+      - incidents
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
