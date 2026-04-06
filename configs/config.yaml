@@ -8,6 +8,9 @@ database:
   password: postgres
   name: sentinel_incident
   sslmode: disable
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 300
 
 auth:
   jwt_secret: "supersecretjwtkey"
@@ -44,3 +47,7 @@ cors:
     - "LoginProvider"
     - "X-Jwt-Token"
   allow_credentials: true
+
+slack:
+  webhook_url: ""
+  enabled: false

@@ -14,6 +14,7 @@ type Config struct {
 	Database Database `yaml:"database"`
 	Auth     Auth     `yaml:"auth"`
 	CORS     CORS     `yaml:"cors"`
+	Slack    Slack    `yaml:"slack"`
 }
 
 type Server struct {
@@ -21,12 +22,15 @@ type Server struct {
 }
 
 type Database struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Name     string `yaml:"name"`
-	SSLMode  string `yaml:"sslmode"`
+	Host            string `yaml:"host"`
+	Port            int    `yaml:"port"`
+	User            string `yaml:"user"`
+	Password        string `yaml:"password"`
+	Name            string `yaml:"name"`
+	SSLMode         string `yaml:"sslmode"`
+	MaxOpenConns    int    `yaml:"max_open_conns"`
+	MaxIdleConns    int    `yaml:"max_idle_conns"`
+	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`
 }
 
 type Auth struct {
@@ -38,6 +42,11 @@ type CORS struct {
 	AllowedMethods   []string `yaml:"allowed_methods"`
 	AllowedHeaders   []string `yaml:"allowed_headers"`
 	AllowCredentials bool     `yaml:"allow_credentials"`
+}
+
+type Slack struct {
+	WebhookURL string `yaml:"webhook_url"`
+	Enabled    bool   `yaml:"enabled"`
 }
 
 var (
