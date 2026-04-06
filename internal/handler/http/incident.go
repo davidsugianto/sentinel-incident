@@ -10,6 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// ListIncidentsResponse represents the response for listing incidents
+type ListIncidentsResponse struct {
+	Incidents []incident.Incident `json:"incidents"`
+	Total     int64                `json:"total"`
+	Page      int                 `json:"page"`
+	PageSize  int                 `json:"page_size"`
+}
+
+// CreateIncidentRequest represents the request body for creating an incident
 type CreateIncidentRequest struct {
 	TeamID      string                 `json:"team_id" binding:"required"`
 	Title       string                 `json:"title" binding:"required"`
@@ -18,6 +27,7 @@ type CreateIncidentRequest struct {
 	Severity    incident.Severity      `json:"severity"`
 }
 
+// UpdateIncidentRequest represents the request body for updating an incident
 type UpdateIncidentRequest struct {
 	Title       *string                 `json:"title,omitempty"`
 	Description *string                 `json:"description,omitempty"`
@@ -26,6 +36,27 @@ type UpdateIncidentRequest struct {
 	Severity    *incident.Severity      `json:"severity,omitempty"`
 }
 
+// IncidentListResponse represents the response for listing incidents
+type IncidentListResponse struct {
+	Incidents []incident.Incident `json:"incidents"`
+	Total     int64               `json:"total"`
+	Page      int                 `json:"page"`
+	PageSize  int                 `json:"page_size"`
+}
+
+// CreateIncident godoc
+// @Summary Create a new incident
+// @Description Create a new incident with the provided details
+// @Tags incidents
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param incident body CreateIncidentRequest true "Incident data"
+// @Success 201 {object} incident.Incident
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /incidents [post]
 func (h *Handler) CreateIncident(c *gin.Context) {
 	var req CreateIncidentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

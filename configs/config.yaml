@@ -51,3 +51,11 @@ cors:
 slack:
   webhook_url: ""
   enabled: false
+
+lark:
+  webhook_url: ""
+  enabled: false
+
+pagerduty:
+  api_token: ""
+  enabled: false

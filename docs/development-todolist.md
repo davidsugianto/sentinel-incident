@@ -28,19 +28,19 @@
   - [x] Webhook configuration
   - [x] Message template support
   - [x] Rich message formatting (blocks, attachments)
-- [ ] Lark Integration
-  - [ ] Webhook configuration
-  - [ ] Message card templates
+- [x] Lark Integration
+  - [x] Webhook configuration
+  - [x] Message card templates
 - [ ] Email Integration (future)
   - [ ] SMTP configuration
   - [ ] HTML template support
 
 ### On-Call Integration
 
-- [ ] PagerDuty Integration
-  - [ ] API client implementation
-  - [ ] Schedule sync
-  - [ ] Escalation policy mapping
+- [x] PagerDuty Integration
+  - [x] API client implementation
+  - [x] Schedule sync
+  - [x] Escalation policy mapping
 - [ ] OpsGenie Integration (future)
 - [ ] VictorOps Integration (future)
 
@@ -83,15 +83,15 @@
 
 ### Testing
 
-- [ ] Unit tests
-  - [ ] Usecase layer tests
-  - [ ] Repository layer tests
-  - [ ] Handler layer tests
+- [x] Unit tests
+  - [x] Usecase layer tests
+  - [x] Repository layer tests
+  - [x] Handler layer tests
 - [ ] Integration tests
   - [ ] API endpoint tests
   - [ ] Database integration tests
-- [ ] Add test coverage reporting
-- [ ] Add mockery for interface mocking
+- [x] Add test coverage reporting
+- [x] Add mockery for interface mocking
 
 ### Code Quality
 
@@ -106,9 +106,9 @@
 
 ## Documentation
 
-- [ ] API Documentation
-  - [ ] OpenAPI/Swagger specification
-  - [ ] Swagger UI endpoint
+- [x] API Documentation
+  - [x] OpenAPI/Swagger specification
+  - [x] Swagger UI endpoint
 - [ ] Architecture decision records (ADRs)
 - [ ] Runbook for operations
 - [ ] Template documentation
@@ -162,12 +162,12 @@
 - [x] Slack integration
 - [x] Basic authentication
 
-### Medium Priority
+### Medium Priority - COMPLETED
 
-1. Lark integration
-2. PagerDuty integration
-3. Unit tests
-4. API documentation
+1. [x] Lark integration
+2. [x] PagerDuty integration
+3. [x] Unit tests
+4. [x] API documentation
 
 ### Low Priority
 
