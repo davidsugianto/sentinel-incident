@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	incidentModel "github.com/davidsugianto/sentinel-incident/internal/model/incident"
 	"github.com/davidsugianto/sentinel-incident/internal/mocks"
+	incidentModel "github.com/davidsugianto/sentinel-incident/internal/model/incident"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
