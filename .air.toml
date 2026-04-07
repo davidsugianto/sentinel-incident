@@ -1,20 +1,74 @@
-# .air.toml
+# .air.toml - Air live reload configuration
+# https://github.com/cosmtrek/air
+
 root = "."
 tmp_dir = "tmp"
 
 [build]
+  # Binary output path
   bin = "tmp/main"
+
+  # Build command
   cmd = "go build -o ./tmp/main ./cmd/http"
-  include_ext = ["go", "yaml"]
-  exclude_dir = ["migrations", "tmp", "vendor"]
+
+  # Watch these file extensions
+  include_ext = ["go", "yaml", "yml", "env"]
+
+  # Ignore these directories
+  exclude_dir = ["migrations", "tmp", "vendor", "bin", "docs", ".git"]
+
+  # Ignore these files
+  exclude_file = []
+
+  # Watch these directories (empty = all)
+  include_dir = []
+
+  # Watch these files (additional to include_ext)
+  include_file = []
+
+  # Delay after file change before building (ms)
+  delay = 1000
+
+  # Stop running old binary when build errors occur
+  stop_on_error = true
+
+  # Send interrupt signal before killing process (windows does not support this)
+  send_interrupt = true
+
+  # Delay after sending interrupt signal
+  kill_delay = 500
+
+  # Add additional arguments to the build command
+  build_args = []
+
+  # Enable debug mode
+  debug = false
 
 [log]
+  # Show log time
   time = true
-  color = true
 
-[dev]
-  debug = true
+  # Only show main log (disables watcher, build, runner)
+  main_only = false
+
+[color]
+  # Customize each part's color. If no color found, use the raw app log.
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  # Delete tmp directory on exit
+  clean_on_exit = true
+
+[screen]
+  # Clear screen on restart
+  clear_on_rebuild = true
 
 [runner]
+  # Runner command
   cmd = "./tmp/main"
+
+  # Restart policy: "always", "never", "on_error"
   restart = "always"
