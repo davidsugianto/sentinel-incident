@@ -1,0 +1,38 @@
+services:
+  api:
+    # Enable debug port for delve debugger (optional)
+    ports:
+      - "8080:8080"
+      - "40000:40000"  # Delve debug port
+
+    # Additional environment variables for local development
+    environment:
+      - GIN_MODE=debug
+      - LOG_LEVEL=debug
+      - ENV=development
+
+    # Mount source code for hot-reload
+    volumes:
+      - .:/app
+      - go-cache:/go/pkg/mod
+      - tmp-data:/app/tmp
+
+  # Optional: Adminer for database management UI
+  adminer:
+    image: adminer
+    container_name: sentinel-incident-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+  # Optional: Redis Commander for Redis UI
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sentinel-incident-redis-ui
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
