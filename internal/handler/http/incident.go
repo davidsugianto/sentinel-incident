@@ -13,7 +13,7 @@ import (
 // ListIncidentsResponse represents the response for listing incidents
 type ListIncidentsResponse struct {
 	Incidents []incident.Incident `json:"incidents"`
-	Total     int64                `json:"total"`
+	Total     int64               `json:"total"`
 	Page      int                 `json:"page"`
 	PageSize  int                 `json:"page_size"`
 }

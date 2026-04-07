@@ -6,6 +6,9 @@ This document provides guidelines and best practices for developing Sentinel Inc
 
 - [Getting Started](#getting-started)
 - [Development Environment](#development-environment)
+  - [Local Development](#local-development-without-docker)
+  - [Docker Development](#docker-development-recommended)
+  - [Docker Services](#docker-services)
 - [Project Structure](#project-structure)
 - [Coding Standards](#coding-standards)
 - [Git Workflow](#git-workflow)
@@ -15,6 +18,8 @@ This document provides guidelines and best practices for developing Sentinel Inc
 - [Error Handling](#error-handling)
 - [Logging Guidelines](#logging-guidelines)
 - [Security Guidelines](#security-guidelines)
+- [Makefile Reference](#makefile-reference)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -22,10 +27,12 @@ This document provides guidelines and best practices for developing Sentinel Inc
 
 ### Prerequisites
 
-- **Go**: 1.24+ (required for `crypto/sha3` in standard library)
-- **Docker**: Latest version
-- **Docker Compose**: v2+
-- **Make**: Build automation
+| Tool | Version | Purpose |
+|------|---------|---------|
+| **Go** | 1.24+ | Runtime (required for `crypto/sha3`) |
+| **Docker** | Latest | Containerization |
+| **Docker Compose** | v2+ | Service orchestration |
+| **Make** | Any | Build automation |
 
 ### Required Tools
 
@@ -36,20 +43,64 @@ go install github.com/swaggo/swag/cmd/swag@latest   # Swagger docs
 go install github.com/vektra/mockery/v2@latest      # Mock generation
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest  # Linting
 go install golang.org/x/tools/cmd/goimports@latest  # Import organization
+
+# Optional: Pre-commit framework
+pip install pre-commit  # or: brew install pre-commit
 ```
 
 ### Quick Start
 
 ```bash
-# Clone and start development environment
+# Clone and setup
 git clone <repository-url>
 cd sentinel-incident
 
 # Copy environment file
 cp .env.example .env
 
+# Install git hooks
+make hooks-install
+
 # Start all services with hot-reload
 make docker-dev
+```
+
+### Pre-commit Hooks
+
+Pre-commit hooks ensure code quality before each commit.
+
+**Install hooks:**
+```bash
+# Option 1: Using Makefile (recommended)
+make hooks-install
+
+# Option 2: Using pre-commit framework
+pre-commit install
+
+# Option 3: Manual installation
+cp .githooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+
+# Option 4: Configure git hooks path
+git config core.hooksPath .githooks
+```
+
+**Run checks manually:**
+```bash
+make pre-commit
+```
+
+**Hooks run automatically on commit:**
+| Check | Description |
+|-------|-------------|
+| `go fmt` | Format Go code |
+| `go mod tidy` | Tidy Go modules |
+| `go test ./...` | Run all unit tests |
+| `go build` | Verify build passes |
+
+**Uninstall hooks:**
+```bash
+make hooks-uninstall
 ```
 
 ---
@@ -59,47 +110,89 @@ make docker-dev
 ### Local Development (without Docker)
 
 ```bash
-# Run PostgreSQL locally (or use Docker)
+# Run PostgreSQL locally
 docker run -d --name postgres -p 5432:5432 \
   -e POSTGRES_USER=user \
   -e POSTGRES_PASSWORD=pass \
   -e POSTGRES_DB=sentinel_incident \
   postgres:15
 
+# Run Redis (optional)
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+
 # Run migrations
 make db-migrate
 
-# Start with hot-reload
+# Start with hot-reload (requires air installed)
 make dev
 ```
 
 ### Docker Development (Recommended)
 
 ```bash
-# Start all services
+# Start all services (foreground with logs)
 make docker-dev
 
-# Or start in background
+# Start in background
 make docker-up
 
 # View logs
 make docker-logs
 
+# View specific service logs
+docker compose logs -f api
+docker compose logs -f postgres
+
 # Stop services
 make docker-down
+
+# Clean all (containers, volumes, images)
+make docker-clean
 ```
+
+### Docker Services
+
+| Service | Port | Description | UI |
+|---------|------|-------------|-----|
+| **api** | 8080 | Application server | http://localhost:8080 |
+| **postgres** | 5432 | PostgreSQL database | - |
+| **redis** | 6379 | Redis cache | - |
+| **adminer** | 8081 | Database UI | http://localhost:8081 |
+| **redis-commander** | 8082 | Redis UI | http://localhost:8082 |
+
+> Note: Adminer and Redis Commander are defined in `docker-compose.override.yml` and loaded automatically.
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `8080` |
-| `DATABASE_URL` | PostgreSQL connection string | - |
-| `JWT_SECRET` | JWT signing secret | - |
-| `LOG_LEVEL` | Logging level | `debug` |
-| `GIN_MODE` | Gin framework mode | `debug` |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `PORT` | Server port | `8080` | No |
+| `GIN_MODE` | Gin framework mode | `debug` | No |
+| `DATABASE_HOST` | Database host | `localhost` | Yes |
+| `DATABASE_PORT` | Database port | `5432` | Yes |
+| `DATABASE_USER` | Database user | `user` | Yes |
+| `DATABASE_PASSWORD` | Database password | `pass` | Yes |
+| `DATABASE_NAME` | Database name | `sentinel_incident` | Yes |
+| `DATABASE_URL` | Full connection URL (overrides individual vars) | - | No |
+| `REDIS_ADDR` | Redis address | `localhost:6379` | No |
+| `JWT_SECRET` | JWT signing secret | - | **Yes** |
+| `LOG_LEVEL` | Logging level | `debug` | No |
+| `LOG_FORMAT` | Log format (json/text) | `json` | No |
+| `ENV` | Environment name | `development` | No |
+| `SLACK_WEBHOOK_URL` | Slack webhook URL | - | No |
+| `LARK_WEBHOOK_URL` | Lark webhook URL | - | No |
+| `PAGERDUTY_API_TOKEN` | PagerDuty API token | - | No |
 
-See `.env.example` for complete list.
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `configs/config.yaml` | Default application configuration |
+| `.env` | Environment variables (git-ignored) |
+| `.env.example` | Environment variables template |
+| `docker-compose.yml` | Docker services definition |
+| `docker-compose.override.yml` | Local Docker overrides (auto-loaded) |
+| `.air.toml` | Air hot-reload configuration |
 
 ---
 
@@ -113,38 +206,56 @@ sentinel-incident/
 ├── internal/
 │   ├── handler/           # HTTP handlers (controllers)
 │   │   └── http/          # REST API handlers
+│   │       └── middleware/ # HTTP middleware
 │   ├── usecase/           # Business logic layer
 │   ├── repository/        # Data access layer
 │   │   ├── alert/         # Alert repositories (Slack, Lark)
 │   │   └── incident/      # Incident repositories
 │   ├── model/             # Domain models and entities
+│   │   ├── alert/
+│   │   ├── incident/
+│   │   ├── oncall/
+│   │   └── team/
 │   └── pkg/               # Internal utilities
 │       ├── config/        # Configuration management
 │       ├── db/            # Database connection
 │       ├── logger/        # Logging utilities
+│       ├── pagerduty/     # PagerDuty client
 │       └── response/      # HTTP response helpers
 ├── migrations/            # Database migrations
 ├── configs/               # Configuration files
-│   └── config.yaml        # Default configuration
 ├── docs/                  # Documentation
 │   ├── swagger.json       # OpenAPI specification
-│   └── swagger.yaml       # OpenAPI specification
-├── test/                  # Integration tests
+│   ├── swagger.yaml       # OpenAPI specification
+│   ├── development-guideline.md
+│   └── development-todolist.md
+├── .githooks/             # Git hooks
+│   └── pre-commit         # Pre-commit hook script
 ├── Dockerfile             # Container definition
 ├── docker-compose.yml     # Service orchestration
+├── docker-compose.override.yml  # Local overrides
+├── .air.toml              # Air configuration
 ├── Makefile               # Build automation
 └── go.mod                 # Go module definition
 ```
 
 ### Layer Responsibilities
 
-| Layer | Responsibility | Dependencies |
-|-------|---------------|--------------|
-| **Handler** | HTTP request/response, validation | Usecase |
-| **Usecase** | Business logic, orchestration | Repository |
-| **Repository** | Data access, external integrations | Database, APIs |
-| **Model** | Domain entities, DTOs | None |
-| **Pkg** | Shared utilities | None |
+| Layer | Responsibility | Dependencies | Example |
+|-------|---------------|--------------|---------|
+| **Handler** | HTTP request/response, validation | Usecase | `internal/handler/http/` |
+| **Usecase** | Business logic, orchestration | Repository | `internal/usecase/` |
+| **Repository** | Data access, external integrations | Database, APIs | `internal/repository/` |
+| **Model** | Domain entities, DTOs | None | `internal/model/` |
+| **Pkg** | Shared utilities | None | `internal/pkg/` |
+
+### Dependency Flow
+
+```
+Handler → Usecase → Repository → Database/API
+   ↓         ↓          ↓
+ Model    Model      Model
+```
 
 ---
 
@@ -265,13 +376,15 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `style`: Formatting (no code change)
-- `refactor`: Code refactoring
-- `test`: Adding tests
-- `chore`: Maintenance
+| Type | Description |
+|------|-------------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation |
+| `style` | Formatting (no code change) |
+| `refactor` | Code refactoring |
+| `test` | Adding tests |
+| `chore` | Maintenance |
 
 **Examples:**
 ```
@@ -279,19 +392,21 @@ feat(alert): add Slack webhook integration
 fix(incident): resolve pagination offset issue
 docs(readme): update installation instructions
 test(usecase): add incident creation tests
+chore(deps): update dependencies
 ```
 
 ### Pull Request Process
 
 1. Create feature branch from `master`
 2. Make changes with clear commits
-3. Run tests: `make test`
-4. Run linter: `make lint`
-5. Update documentation if needed
-6. Create PR with description of changes
-7. Request review
-8. Address review comments
-9. Squash and merge
+3. **Pre-commit hooks run automatically**
+4. Run tests manually: `make test`
+5. Run linter: `make lint`
+6. Update documentation if needed
+7. Create PR with description of changes
+8. Request review
+9. Address review comments
+10. Squash and merge
 
 ---
 
@@ -305,10 +420,14 @@ internal/
 │   └── incident/
 │       ├── usecase.go
 │       └── usecase_test.go
-└── repository/
-    └── incident/
-        ├── repository.go
-        └── repository_test.go
+├── repository/
+│   └── incident/
+│       ├── repository.go
+│       └── repository_test.go
+└── handler/
+    └── http/
+        ├── incident.go
+        └── incident_test.go
 ```
 
 ### Test Naming
@@ -322,7 +441,7 @@ func TestCreateIncident_EmptyContent_ReturnsError(t *testing.T) {}
 func TestGetIncident_NotFound_ReturnsError(t *testing.T) {}
 ```
 
-### Test Pattern
+### Test Pattern (Arrange-Act-Assert)
 
 ```go
 func TestCreateIncident_ValidInput_ReturnsIncident(t *testing.T) {
@@ -342,7 +461,6 @@ func TestCreateIncident_ValidInput_ReturnsIncident(t *testing.T) {
     // Assert
     assert.NoError(t, err)
     assert.Equal(t, "test-id", result.ID)
-    assert.True(t, mockRepo.CreateCalled)
 }
 ```
 
@@ -358,14 +476,17 @@ go test ./internal/usecase/incident/...
 # With coverage
 make test-coverage
 
-# Verbose
+# Verbose output
 go test -v ./...
+
+# Run specific test
+go test -run TestCreateIncident ./...
 ```
 
 ### Mock Generation
 
 ```bash
-# Generate mocks
+# Generate all mocks
 make mocks
 
 # Or with mockery directly
@@ -385,6 +506,8 @@ mockery --name=Repository --dir=./internal/repository/incident --output=./intern
 | `POST` | `/v1/incidents` | Create incident |
 | `PUT` | `/v1/incidents/:id` | Update incident |
 | `DELETE` | `/v1/incidents/:id` | Delete incident |
+| `GET` | `/v1/ping` | Health check |
+| `GET` | `/swagger/index.html` | API documentation |
 
 ### Request/Response Format
 
@@ -418,6 +541,17 @@ mockery --name=Repository --dir=./internal/repository/incident --output=./intern
 }
 ```
 
+### HTTP Status Codes
+
+| Code | Usage |
+|------|-------|
+| `200` | Success |
+| `201` | Created |
+| `400` | Bad request / Validation error |
+| `401` | Unauthorized |
+| `404` | Not found |
+| `500` | Internal server error |
+
 ### Swagger Documentation
 
 ```go
@@ -436,14 +570,24 @@ mockery --name=Repository --dir=./internal/repository/incident --output=./intern
 func (h *handler) Create(c *gin.Context) { ... }
 ```
 
+**Generate Swagger docs:**
+```bash
+make swagger
+```
+
 ---
 
 ## Database Guidelines
 
 ### Migrations
 
-Create migrations in `migrations/` directory:
+Create migrations in `migrations/` directory with naming pattern:
+```
+{timestamp}_{description}.up.sql
+{timestamp}_{description}.down.sql
+```
 
+Example:
 ```sql
 -- migrations/20240101000000_create_incidents_table.up.sql
 CREATE TABLE incidents (
@@ -456,6 +600,9 @@ CREATE TABLE incidents (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE INDEX idx_incidents_team_id ON incidents(team_id);
+CREATE INDEX idx_incidents_status ON incidents(status);
+
 -- migrations/20240101000000_create_incidents_table.down.sql
 DROP TABLE IF EXISTS incidents;
 ```
@@ -463,20 +610,16 @@ DROP TABLE IF EXISTS incidents;
 ### Migration Commands
 
 ```bash
-# Run migrations
-make db-migrate
-
-# Rollback last migration
-make db-rollback
-
-# Reset database
-make db-reset
+make db-migrate    # Run all pending migrations
+make db-rollback   # Rollback last migration
+make db-reset      # Drop all and re-run migrations
+make db-drop       # Drop all migrations
 ```
 
 ### GORM Best Practices
 
 ```go
-// Use struct for model
+// Model definition with proper tags
 type Incident struct {
     ID        string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
     TeamID    string    `gorm:"type:uuid;not null;index"`
@@ -497,6 +640,11 @@ err := r.db.Transaction(func(tx *gorm.DB) error {
     }
     return nil
 })
+
+// Use context for timeout/cancellation
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+err := r.db.WithContext(ctx).First(&incident, "id = ?", id).Error
 ```
 
 ---
@@ -529,6 +677,8 @@ func (h *handler) GetByID(c *gin.Context) {
         switch {
         case errors.Is(err, incident.ErrNotFound):
             response.NotFound(c, "Incident not found")
+        case errors.Is(err, ErrUnauthorized):
+            response.Unauthorized(c, "Unauthorized")
         default:
             response.InternalError(c, "Failed to get incident")
         }
@@ -544,13 +694,13 @@ func (h *handler) GetByID(c *gin.Context) {
 
 ### Log Levels
 
-| Level | Usage |
-|-------|-------|
-| `DEBUG` | Development details, temporary debugging |
-| `INFO` | Normal operations, business events |
-| `WARN` | Unexpected but handled situations |
-| `ERROR` | Errors that affect operations |
-| `FATAL` | Unrecoverable errors, app termination |
+| Level | Usage | Example |
+|-------|-------|---------|
+| `DEBUG` | Development details, temporary debugging | Variable values, flow tracing |
+| `INFO` | Normal operations, business events | Incident created, alert sent |
+| `WARN` | Unexpected but handled situations | Retry attempt, deprecated API use |
+| `ERROR` | Errors that affect operations | Database error, API failure |
+| `FATAL` | Unrecoverable errors | Config load failure, startup error |
 
 ### Structured Logging
 
@@ -568,6 +718,12 @@ log.WithError(err).WithField("incident_id", id).Error("Failed to send alert")
 
 // Debug (development only)
 log.Debugf("Processing incident: %+v", incident)
+
+// Warning
+log.WithFields(log.Fields{
+    "retry_count": count,
+    "max_retries": maxRetries,
+}).Warn("Retrying API call")
 ```
 
 ---
@@ -611,12 +767,76 @@ func (h *handler) Create(c *gin.Context) {
 }
 ```
 
-### Sensitive Data
+### Security Checklist
 
-- Never log sensitive data (passwords, tokens, PII)
-- Use environment variables for secrets
-- Encrypt sensitive data at rest
-- Use HTTPS in production
+- [ ] Never log sensitive data (passwords, tokens, PII)
+- [ ] Use environment variables for secrets
+- [ ] Validate all user input
+- [ ] Use parameterized queries (GORM handles this)
+- [ ] Enable CORS with specific origins only
+- [ ] Use HTTPS in production
+- [ ] Rotate JWT secrets periodically
+- [ ] Implement rate limiting for production
+
+---
+
+## Makefile Reference
+
+### Development Commands
+
+| Command | Description |
+|---------|-------------|
+| `make dev` | Run with Air hot-reload (local) |
+| `make docker-dev` | Run with Docker Compose + Air |
+| `make build` | Build the binary |
+| `make run` | Build and run the binary |
+
+### Docker Commands
+
+| Command | Description |
+|---------|-------------|
+| `make docker-build` | Build Docker image |
+| `make docker-up` | Start all services in background |
+| `make docker-down` | Stop all services |
+| `make docker-logs` | View container logs (follow) |
+| `make docker-clean` | Remove containers, volumes, images |
+
+### Database Commands
+
+| Command | Description |
+|---------|-------------|
+| `make db-migrate` | Run database migrations |
+| `make db-rollback` | Rollback last migration |
+| `make db-reset` | Reset database (drop and recreate) |
+| `make db-drop` | Drop all migrations |
+
+### Testing & Quality Commands
+
+| Command | Description |
+|---------|-------------|
+| `make test` | Run all tests |
+| `make test-coverage` | Run tests with coverage report |
+| `make lint` | Run golangci-lint |
+| `make fmt` | Format code with go fmt |
+| `make imports` | Organize imports with goimports |
+| `make tidy` | Run go mod tidy |
+
+### Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `make clean` | Clean build artifacts |
+| `make deps` | Download dependencies |
+| `make swagger` | Generate Swagger documentation |
+| `make mocks` | Generate mocks with mockery |
+
+### Git Hooks Commands
+
+| Command | Description |
+|---------|-------------|
+| `make hooks-install` | Install pre-commit hooks |
+| `make hooks-uninstall` | Remove pre-commit hooks |
+| `make pre-commit` | Run pre-commit checks manually |
 
 ---
 
@@ -624,64 +844,123 @@ func (h *handler) Create(c *gin.Context) {
 
 ### Common Issues
 
-**Port already in use:**
+#### Port Already in Use
+
 ```bash
+# Find process using port
 lsof -i :8080
+lsof -i :5432
+
+# Kill process
 kill -9 <PID>
 ```
 
-**Database connection failed:**
+#### Database Connection Failed
+
 ```bash
 # Check PostgreSQL is running
 docker ps | grep postgres
 
 # Check connection
 psql -h localhost -U user -d sentinel_incident
+
+# Restart database
+docker compose restart postgres
 ```
 
-**Hot-reload not working:**
+#### Hot-reload Not Working
+
 ```bash
 # Check Air is installed
 which air
 
 # Check .air.toml configuration
 cat .air.toml
+
+# Reinstall Air
+go install github.com/cosmtrek/air@latest
 ```
 
-**Module dependency issues:**
+#### Module Dependency Issues
+
 ```bash
-go mod tidy
+# Clean and re-download
+go clean -modcache
 go mod download
+go mod tidy
+```
+
+#### Docker Issues
+
+```bash
+# View logs
+docker compose logs -f
+
+# Restart all services
+docker compose restart
+
+# Clean rebuild
+make docker-clean
+make docker-dev
+```
+
+#### Pre-commit Hook Fails
+
+```bash
+# Run manually to see errors
+make pre-commit
+
+# Format code
+make fmt
+
+# Fix imports
+make imports
+
+# Run tests
+make test
+```
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+export LOG_LEVEL=debug
+export GIN_MODE=debug
+
+# Run with verbose output
+go run ./cmd/http
+```
+
+### Health Check
+
+```bash
+# Check if API is running
+curl http://localhost:8080/v1/ping
+
+# Check Swagger docs
+open http://localhost:8080/swagger/index.html
 ```
 
 ---
 
-## Useful Commands
+## Quick Reference
 
 ```bash
-# Development
-make dev              # Run with hot-reload
-make docker-dev       # Run with Docker + hot-reload
+# Start development
+make docker-dev
 
-# Build
-make build            # Build binary
-make docker-build     # Build Docker image
+# Run tests
+make test
 
-# Database
-make db-migrate       # Run migrations
-make db-reset         # Reset database
+# Format and lint
+make fmt && make lint
 
-# Testing
-make test             # Run tests
-make test-coverage    # Run with coverage
+# Database operations
+make db-migrate
 
-# Code Quality
-make lint             # Run linter
-make fmt              # Format code
-make tidy             # Tidy modules
+# Generate docs
+make swagger
 
-# Utilities
-make swagger          # Generate Swagger docs
-make mocks            # Generate mocks
-make clean            # Clean build artifacts
+# Install git hooks
+make hooks-install
 ```

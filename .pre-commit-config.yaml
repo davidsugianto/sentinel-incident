@@ -1,0 +1,65 @@
+# Pre-commit hooks configuration
+# Install pre-commit: pip install pre-commit or brew install pre-commit
+# Then run: pre-commit install
+
+repos:
+  # Go formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+  # Go specific hooks
+  - repo: https://github.com/TekWizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      # Format code
+      - id: go-fmt
+
+      # Run go mod tidy
+      - id: go-mod-tidy
+
+      # Run tests
+      - id: go-test-mod
+        args: [-v, -timeout, 30s]
+
+      # Run golangci-lint (optional - uncomment if golangci-lint is configured)
+      # - id: golangci-lint
+      #   args: [--config, .golangci.yml]
+
+  # Local custom hooks
+  - repo: local
+    hooks:
+      # Ensure go mod is tidy
+      - id: go-mod-tidy-check
+        name: go-mod-tidy-check
+        entry: bash -c 'go mod tidy && git diff --exit-code go.mod go.sum'
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      # Run unit tests
+      - id: go-test
+        name: go-test
+        entry: bash -c 'go test ./... -v -timeout 60s'
+        language: system
+        pass_filenames: false
+        types: [go]
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

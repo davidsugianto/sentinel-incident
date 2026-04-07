@@ -1,4 +1,4 @@
-.PHONY: help dev build test test-coverage clean docker-dev docker-build docker-up docker-down docker-logs docker-clean db-migrate db-reset lint fmt imports tidy deps swagger mocks run
+.PHONY: help dev build test test-coverage clean docker-dev docker-build docker-up docker-down docker-logs docker-clean db-migrate db-reset lint fmt imports tidy deps swagger mocks run hooks-install hooks-uninstall pre-commit
 
 # Variables
 APP_NAME := sentinel-incident
@@ -53,6 +53,11 @@ help:
 	@echo "  deps          Download dependencies"
 	@echo "  swagger       Generate Swagger documentation"
 	@echo "  mocks         Generate mocks with mockery"
+	@echo ""
+	@echo "Git Hooks:"
+	@echo "  hooks-install Install pre-commit hooks"
+	@echo "  hooks-uninstall Remove pre-commit hooks"
+	@echo "  pre-commit    Run pre-commit checks manually"
 
 # ============================================
 # Development
@@ -187,3 +192,30 @@ mocks:
 	else \
 		echo "❌ mockery not installed. Install with: go install github.com/vektra/mockery/v2@latest"; \
 	fi
+
+# ============================================
+# Git Hooks
+# ============================================
+
+hooks-install:
+	@echo "🪝 Installing git hooks..."
+	@if command -v pre-commit >/dev/null 2>&1; then \
+		pre-commit install; \
+		echo "✅ Pre-commit hooks installed (via pre-commit framework)"; \
+	else \
+		cp .githooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit; \
+		echo "✅ Pre-commit hooks installed (via .git/hooks)"; \
+	fi
+	@echo "💡 Tip: You can also use 'git config core.hooksPath .githooks'"
+
+hooks-uninstall:
+	@echo "🪝 Uninstalling git hooks..."
+	@if command -v pre-commit >/dev/null 2>&1; then \
+		pre-commit uninstall; \
+	fi
+	rm -f .git/hooks/pre-commit
+	@echo "✅ Pre-commit hooks uninstalled"
+
+pre-commit:
+	@echo "🔍 Running pre-commit checks..."
+	@./.githooks/pre-commit

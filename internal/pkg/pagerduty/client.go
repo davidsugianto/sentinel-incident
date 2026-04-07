@@ -174,11 +174,11 @@ func (c *Client) CreateIncident(ctx context.Context, serviceID, title, descripti
 
 	payload := map[string]interface{}{
 		"incident": map[string]interface{}{
-			"type":        "incident",
-			"title":       title,
-			"service":     map[string]string{"id": serviceID, "type": "service_reference"},
-			"urgency":     urgency,
-			"body":        map[string]string{"type": "incident_body", "details": description},
+			"type":    "incident",
+			"title":   title,
+			"service": map[string]string{"id": serviceID, "type": "service_reference"},
+			"urgency": urgency,
+			"body":    map[string]string{"type": "incident_body", "details": description},
 		},
 	}
 
